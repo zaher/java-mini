@@ -17,9 +17,9 @@ public class Calculator {
 	protected CalcState calcState = CalcState.csFirst;
 	protected String sNumber = "0";
 	protected char charSign = ' ';
-	
-	protected char cCurrentOperator = '=';
-	protected char cLastOperator = ' ';
+
+	protected String cCurrentOperator = "=";
+	protected String cLastOperator = " ";
 	protected double dLastResult = 0;
 	protected double dOperand = 0;
 	protected double dMemory = 0;
@@ -29,28 +29,28 @@ public class Calculator {
 
 	public int iMaxDecimals = 10;
 	public int iMaxDigits = 30;
-	
+
 	public Calculator() {
 		reset();
 	}
-	
+
 	@Override
-	public String toString() {		
-		return charSign+sNumber;
+	public String toString() {
+		return charSign + sNumber;
 	}
 
-	public String getNumber(){
+	public String getNumber() {
 		return sNumber;
 	}
-	
-	public String getSign(){
+
+	public String getSign() {
 		return String.valueOf(charSign);
 	}
-	
+
 	public String repeat(char c, int n) {
 		char[] chars = new char[n];
 		Arrays.fill(chars, c);
-		return chars.toString();
+		return String.valueOf(chars);
 	}
 
 	public String format(double d) {
@@ -62,35 +62,33 @@ public class Calculator {
 		return dDisplayNumber;
 	}
 
-	public void setDisplay(double d, boolean ShouldKeepZeroes) {
-		String s;
-		int KeepZeroes;
+	public void setDisplay(double d, boolean bKeepZeroes) {
 
 		dDisplayNumber = d;
-		KeepZeroes = 0;
+		int iZeroes = 0;
 		int p = sNumber.indexOf('.');
 
-		if (ShouldKeepZeroes && p >= 0) {
+		if (bKeepZeroes && p >= 0) {
 			int i = sNumber.length() - 1;
 			while (i > p) {
 				if (sNumber.charAt(i) == '0')
-					KeepZeroes++;
+					iZeroes++;
 				else
 					break;
 			}
 		}
 
-		s = format(d);
+		String s = format(d);
 
-		if (KeepZeroes > 0)
-			s = s + repeat('0', KeepZeroes);
+		if (iZeroes > 0)
+			s = s + repeat('0', iZeroes);
 
-		//Move the sign to a variable
-		if (s.charAt(0) == '-') { 
+		// Move the sign to a variable
+		if (s.charAt(0) == '-') {
 			s = s.substring(1);
 			charSign = '-';
-		} else 
-			charSign = ' ';		
+		} else
+			charSign = ' ';
 
 		if (s.length() > iMaxDigits + 1 + iMaxDecimals)
 			error();
@@ -101,170 +99,165 @@ public class Calculator {
 		}
 	}
 
-	protected void check() {
+	protected boolean check() {
 		if (calcState == CalcState.csFirst) {
 			calcState = CalcState.csValid;
 			setDisplay(0, false);
+			return true;
 		}
+		return false;
 	}
 
-	public boolean process(String key) {
+	public void process(String key) {
 
-		double r;
 		String s;
-		boolean result = true;
 
 		key = key.toUpperCase();
 
-		if ((calcState == CalcState.csError) && (key != "C"))
+		if ((calcState == CalcState.csError) && (!key.equals("CR")))
 			key = " ";
-		r = 0;
+		double r = 0;
 		if (bHexShown) {
 			r = getDisplay();
 			setDisplay(r, false);
 			bHexShown = false;
-			if (key == "H")
+			if (key.equals("H"))
 				key = " ";
 		}
 
-		if (key == "X^Y")
+		if (key.equals("X^Y"))
 			key = "^";
-		else if (key == "_")
+		else if (key.equals("_"))
 			key = "+/-";
 
-		if (key.length() > 1) {
-			r = getDisplay();
-			if (key == "ON")
-				reset();
-			else if (key == "AC")
-				clear();
-			else if (key == "CR") {
-				check();
+		r = getDisplay();
+		if (key.equals("ON"))
+			reset();
+		else if (key.equals("AC"))
+			clear();
+		else if (key.equals("CR")) {
+			if (!check()) {
 				setDisplay(0, true);
-			} else if (key == "1/X") {
-				if (r == 0)
-					error();
-				else
-					setDisplay(1 / r, false);
-			} else if (key == "SQRT") {
-				if (r < 0)
-					error();
-				else
-					setDisplay(Math.sqrt(r), false);
-			} else if (key == "LOG") {
-				if (r <= 0)
-					error();
-				else
-					setDisplay(Math.log(r), false);
-			} else if (key == "X^2")
-				setDisplay(r * r, false);
-			else if (key == "+/-") {
-				if (charSign == ' ')
-					charSign = '-';
-				else
-					charSign = ' ';
-				r = getDisplay();
-				setDisplay(-r, true);
-			} else if (key == "M+") {
-				dMemory = dMemory + r;
-				bHaveMemory = true;
-			} else if (key == "M-") {
-				dMemory = dMemory - r;
-				bHaveMemory = true;
-			} else if (key == "MR") {
-				check();
-				setDisplay(dMemory, false);
-			} else if (key == "MC") {
-				dMemory = 0;
-				bHaveMemory = false;
-			} else if (key == "DEL") // Delete
-			{
-				check();
-				if (sNumber.length() == 1)
-					sNumber = "0";
-				else
-					sNumber = sNumber.substring(0, sNumber.length() - 2);
-				setDisplay(Double.valueOf(sNumber), true);// { !!! }
+				calcState = CalcState.csFirst;
 			}
-		} else { // key is one char
-			char k = key.charAt(0);
-
-			if (k >= '0' && k <= '9') {
-				if (sNumber.length() < iMaxDigits) {
-					check();
-					if (sNumber == "0")
-						sNumber = "";
-					sNumber = sNumber + k;
-					dDisplayNumber = Double.parseDouble(sNumber);
-					// SetDisplay(StrToFloat(Number), True);
-				}
-			} else if (k == '.') {
-				check();
-				if (sNumber.indexOf('.') < 0)
-					sNumber = sNumber + '.';
-			} else if (k == 'H') {
-				r = getDisplay();
-				sNumber = Long.toHexString(Math.round(r));
-				bHexShown = true;
-			} else { // finally else '^', '+', '-', '*', '/', '%', '='
-				if ((k == '=') && (calcState == CalcState.csFirst)) {
-					// for repeat last operator
-					calcState = CalcState.csValid;
-					r = dLastResult;
-					cCurrentOperator = cLastOperator;
-				} else
-					r = getDisplay();
-
-				if (calcState == CalcState.csValid) {
-					bStarted = true;
-					if (cCurrentOperator == '=')
-						s = " ";
-					else
-						s = String.valueOf(cCurrentOperator);
-
-					log(s + format(r));
-
-					calcState = CalcState.csFirst;
-					cLastOperator = cCurrentOperator;
-					dLastResult = r;
-					if (k == '%') {
-						if (cCurrentOperator == '+'
-								|| cCurrentOperator == '-')
-							r = dOperand * r / 100;
-						else if (cCurrentOperator == '*'
-								|| cCurrentOperator == '/')
-							r = r / 100;
-					}
-
-					else if (cCurrentOperator == '^') {
-						if ((dOperand == 0) && (r <= 0))
-							error();
-						else
-							setDisplay(Math.pow(dOperand, r), false);
-					} else if (cCurrentOperator == '+')
-						setDisplay(dOperand + r, false);
-					else if (cCurrentOperator == '-')
-						setDisplay(dOperand - r, false);
-					else if (cCurrentOperator == '*')
-						setDisplay(dOperand * r, false);
-					else if (cCurrentOperator == '/') {
-						if (r == 0)
-							error();
-						else
-							setDisplay(dOperand / r, false);
-					}
-				}
-				if (k == '=')
-					log('=' + sNumber);
-
-				cCurrentOperator = k;
-				dOperand = getDisplay();
-
-			}
-			result = false;
+		} else if (key.equals("1/X")) {
+			if (r == 0)
+				error();
+			else
+				setDisplay(1 / r, false);
+		} else if (key.equals("SQRT")) {
+			if (r < 0)
+				error();
+			else
+				setDisplay(Math.sqrt(r), false);
+		} else if (key.equals("LOG")) {
+			if (r <= 0)
+				error();
+			else
+				setDisplay(Math.log(r), false);
+		} else if (key.equals("X^2"))
+			setDisplay(r * r, false);
+		else if (key.equals("+/-")) {
+			if (charSign == ' ')
+				charSign = '-';
+			else
+				charSign = ' ';
+			r = getDisplay();
+			setDisplay(-r, true);
+		} else if (key.equals("M+")) {
+			dMemory = dMemory + r;
+			bHaveMemory = true;
+		} else if (key.equals("M-")) {
+			dMemory = dMemory - r;
+			bHaveMemory = true;
+		} else if (key.equals("MR")) {
+			check();
+			setDisplay(dMemory, false);
+		} else if (key.equals("MC")) {
+			dMemory = 0;
+			bHaveMemory = false;
+		} else if (key.equals("DEL")) // Delete
+		{
+			check();
+			if (sNumber.length() == 1)
+				sNumber = "0";
+			else
+				sNumber = sNumber.substring(0, sNumber.length() - 2);
+			setDisplay(Double.valueOf(sNumber), true);// { !!! }
 		}
+
+		else if (key.compareTo("0") >= 0 && (key.compareTo("9") <= 0)) {
+			if (sNumber.length() < iMaxDigits) {
+				if (check())
+					sNumber = "";
+				sNumber = sNumber + key;
+				dDisplayNumber = Double.parseDouble(sNumber);
+			}
+		} else if (key.equals(".")) {
+			check();
+			if (sNumber.indexOf('.') < 0)
+				sNumber = sNumber + '.';
+		} else if (key.equals("H")) {
+			r = getDisplay();
+			sNumber = Long.toHexString(Math.round(r));
+			bHexShown = true;
+		} else { // finally else '^', '+', '-', '*', '/', '%', '='
+			if (key.equals("=") && (calcState == CalcState.csFirst)) {
+				// for repeat last operator
+				calcState = CalcState.csValid;
+				r = dLastResult;
+				cCurrentOperator = cLastOperator;
+			} else
+				r = getDisplay();
+
+			if (calcState == CalcState.csValid) {
+				bStarted = true;
+				if (cCurrentOperator.equals("="))
+					s = " ";
+				else
+					s = String.valueOf(cCurrentOperator);
+
+				log(s + format(r));
+
+				calcState = CalcState.csFirst;
+				cLastOperator = cCurrentOperator;
+				dLastResult = r;
+				if (key.equals("%")) {
+					if (cCurrentOperator.equals("+")
+							|| cCurrentOperator.equals("-"))
+						r = dOperand * r / 100;
+					else if (cCurrentOperator.equals("*")
+							|| cCurrentOperator.equals("/"))
+						r = r / 100;
+				}
+
+				else if (cCurrentOperator.equals("^")) {
+					if ((dOperand == 0) && (r <= 0))
+						error();
+					else
+						setDisplay(Math.pow(dOperand, r), false);
+				} else if (cCurrentOperator.equals("+"))
+					setDisplay(dOperand + r, false);
+				else if (cCurrentOperator.equals("-"))
+					setDisplay(dOperand - r, false);
+				else if (cCurrentOperator.equals("*"))
+					setDisplay(dOperand * r, false);
+				else if (cCurrentOperator.equals("/")) {
+					if (r == 0)
+						error();
+					else
+						setDisplay(dOperand / r, false);
+				}
+			}
+			if (key.equals("="))
+				log('=' + sNumber);
+
+			cCurrentOperator = key;
+			dOperand = getDisplay();
+
+		}
+
 		refresh();
-		return result;
 	}
 
 	public void clear() {
@@ -274,7 +267,8 @@ public class Calculator {
 		calcState = CalcState.csFirst;
 		sNumber = "0";
 		charSign = ' ';
-		cCurrentOperator = '=';
+		cCurrentOperator = "=";
+		refresh();
 	}
 
 	public void reset() {
